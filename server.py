@@ -37,11 +37,26 @@ def handle_file():
 
     file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
 
-    return jsonify({"status": "success", "file_id": file_id})
+    return jsonify({"status": "success", "file_id": file_id, "filename": filename})
 
-@app.route('/new-share-link/<file_id>')
-def new_share_link(file_id):
-    return file_id
+@app.route('/new-share-link', methods=["GET", "POST"])
+def new_share_link():
+    if request.method == "POST":
+        file_id = request.form.get("file_id")
+        filename = request.form.get("filename")
+        sharer = request.form.get("sharer")
+        expires_in = request.form.get("expires_in")
+        how_many_downloads = request.form.get("download_times")
+        can_raw_checkbox = request.form.get("can_raw")
+
+        can_raw = can_raw_checkbox is not None
+
+        share_link = "https://127.0.0.1:5000/view/" + file_id 
+
+        return jsonify({"status": "success", "share_link": share_link})
+    
+    return render_template("create_share_link.html")
+    
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", debug=True)

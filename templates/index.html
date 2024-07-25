@@ -73,7 +73,12 @@
                     if (xhr.status === 200) {
                         const response = JSON.parse(xhr.responseText);
                         if (response.status === "success") {
-                            window.location.href = `/new-share-link/${response.file_id}`
+                            sessionStorage.removeItem('file_id');
+                            sessionStorage.removeItem('filename');
+                            sessionStorage.setItem("file_id", response.file_id);
+                            sessionStorage.setItem("filename", response.filename);
+
+                            window.location.href = "/new-share-link";
                         } else {
                             alert(`Error ${response.error_text}`);
                         }
@@ -89,7 +94,7 @@
                 if (selectedFile) {
                     uploadFile(selectedFile);
                 }
-            })
+            });
         </script>
     </body>
 </html>
