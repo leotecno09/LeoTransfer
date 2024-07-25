@@ -1,0 +1,95 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/static/css/index.css" rel="stylesheet">
+        <title>LeoTransfer | leotecno.it</title>
+    </head>
+    <body>
+        <div class="container">
+            <div class="justify-content-center text-center header">
+                <br>
+                <h1 style="font-weight: bold; color: rgb(206, 206, 206); letter-spacing: -0.05em;">Welcome to LeoTransfer</h1>
+                <h4 style="color: rgb(180, 180, 180);">An easy way to share files.</p>
+                <div class="container mt-5" style="top: 100px;">
+                    <div class="card" style="height: 400; width: 800;">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <p class="card-text">Share link</p>
+                                    <a href="/info/share_link" class="card-text" style="font-size: 13px; color: rgb(133, 133, 133);">What's a share link?</a>
+                                    <br>
+                                    <div class="container mt-5">
+                                        <div class="file-drop-area" id="drop-area">
+                                            <ion-icon name="cloud-upload-outline" class="icon"></ion-icon>
+                                            <div class="instructions" id="file-name">Select your file</div>
+                                            <input type="file" name="file" id="file-input">
+                                            <!--div class="file-name" id="file-name"></div!-->
+                                        </div>
+                                    </div>
+                                    <br>
+                                    <button class="btn btn-primary" id="submit_upload" type="submit">Proceed</button>
+                                    </form>
+                                </div>
+                                <div class="col-md-4 vertical-divider">
+                                    <p class="card-text">Share room</p>
+                                    <a href="/info/share_room" class="card-text" style="font-size: 13px; color: rgb(133, 133, 133);">What's a share room?</a>
+                                    <button class="btn btn-success" style="margin-top: 80px;">Create a share room</button>
+                                    <button class="btn btn-secondary" style="margin-top: 10px;">Join a share room</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glassy-overlay">
+            <div class="canvas-container">
+                <canvas></canvas>
+            </div>
+        </div>
+        <script src="/static/js/index_animated_bg.js"></script>
+        <script src="/static/js/detect_files_indexpage.js"></script>
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+        <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+        <script>
+            const submitUploadBtn = document.getElementById("submit_upload");
+
+            const uploadFile = (file) => {
+                const formData = new FormData();
+                formData.append("file", file);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", "/api/upload_file", true);
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.status === "success") {
+                            window.location.href = `/new-share-link/${response.file_id}`
+                        } else {
+                            alert(`Error ${response.error_text}`);
+                        }
+                    } else {
+                        alert("Error during file upload. Try again.")
+                    }
+                };
+
+                xhr.send(formData);
+            };
+
+            submitUploadBtn.addEventListener("click", function() {
+                if (selectedFile) {
+                    uploadFile(selectedFile);
+                }
+            })
+        </script>
+    </body>
+</html>
