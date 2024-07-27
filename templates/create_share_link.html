@@ -14,6 +14,7 @@
                         <input type="hidden" id="file_id" name="file_id">
                         <input type="hidden" id="filename" name="filename">
                         <h5 class="card-title text-center">Customize your share link</h5>
+                        <p class="text-center">{{filename}}</p>
                         <p>Shared by:</p>
                         <input type="text" id="sharer" name="sharer" class="form-control" required>
                         <br>
@@ -27,7 +28,7 @@
                         <br>
                         <p>Can be downloaded:</p>
                         <select class="form-select" aria-label="Download times" name="download_times">
-                            <option selected value="30">Infinite times</option>
+                            <option selected value="infinite">Infinite times</option>
                             <option value="50">50 times</option>
                             <option value="30">30 times</option>
                             <option value="10">10 times</option>
@@ -84,7 +85,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === "success") {
-                        alert(`Share link created. Here you go! ${data.share_link}`)
+                        alert(`Share link created. Here you go! ${data.share_link}`);
+                        sessionStorage.removeItem('file_id');
+                        sessionStorage.removeItem('filename');
                         window.location.href = "/";
                     } else {
                         alert(`Error: ${data.error_text}`);
