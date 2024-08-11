@@ -11,8 +11,8 @@
             <div class="card" style="width: 25rem;">
                 <div class="card-body">
                     <form id="share-link-options">
-                        <input type="hidden" id="file_id" name="file_id">
-                        <input type="hidden" id="filename" name="filename">
+                        <!--input type="hidden" id="file_id" name="file_id">
+                        <input type="hidden" id="filename" name="filename"!-->
                         <h5 class="card-title text-center">Customize your share link</h5>
                         <p class="text-center">{{filename}}</p>
                         <p>Shared by:</p>
@@ -60,7 +60,7 @@
         <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
         <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
         <script>
-            document.addEventListener("DOMContentLoaded", () => {
+            /*document.addEventListener("DOMContentLoaded", () => {
                 const fileId = sessionStorage.getItem("file_id");
                 const filename = sessionStorage.getItem("filename");
 
@@ -71,7 +71,7 @@
                     alert("No file data found. Please upload a file first.");
                     window.location.href = "/";
                 }
-            });
+            });*/
 
             document.getElementById("share-link-options").addEventListener("submit", function(event) {
                 event.preventDefault();
@@ -86,8 +86,8 @@
                 .then(data => {
                     if (data.status === "success") {
                         alert(`Share link created. Here you go! ${data.share_link}`);
-                        sessionStorage.removeItem('file_id');
-                        sessionStorage.removeItem('filename');
+                        //sessionStorage.removeItem('file_id');
+                        //sessionStorage.removeItem('filename');
                         window.location.href = "/";
                     } else {
                         alert(`Error: ${data.error_text}`);

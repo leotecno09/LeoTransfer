@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, jsonify, send_file, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
@@ -6,13 +6,25 @@ import os
 import secrets
 import string
 import json
+import io
+import threading
+import time
 
 app = Flask(__name__)
 #socketio = SocketIO(app)
 
 UPLOAD_FOLDER = "./static/uploads"
+TEMP_FOLDER = "./static/uploads/temp"
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config["TEMP_FOLDER"] = TEMP_FOLDER
+app.secret_key = "F3487@83jd!9fdhLfo4$&DSN"
+
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+if not os.path.exists(app.config['TEMP_FOLDER']):
+    os.makedirs(app.config['TEMP_FOLDER'])
 
 #connected_users = []
 
@@ -20,6 +32,19 @@ def generate_file_id(length=32):
     characters = string.ascii_letters + string.digits
     random_string = ''.join(secrets.choice(characters) for _ in range(length))
     return random_string
+
+# Thread per cancellare i file salvati nella cartella temporane durante il caricamento
+class delete_temp_file(threading.Thread):
+    def __init__(self, filepath, delay):
+        super().__init__()
+        self.filepath = filepath
+        self.delay = delay
+
+    def run(self):
+        time.sleep(self.delay)
+        if os.path.exists(self.filepath):
+            os.remove(self.filepath)
+            print(f"[NETTURBINO] File {self.filepath} deleted.")
 
 def ReadJSON(file_code, line):
     json_filename = f"{UPLOAD_FOLDER}/{file_code}.json"
@@ -42,32 +67,49 @@ def ReadJSON(file_code, line):
         print(f"Error during decode of {json_filename}")
         return None
 
-@app.route('/')
+@app.route('/', methods=["GET", "POST"])
 def index():
+    if request.method == "POST":
+        file = request.files["file"]
+
+        if file.filename == "":
+            return jsonify({"status": "error", "error_text": "No files selected"})
+
+        filename = secure_filename(file.filename)
+        file_id = generate_file_id()
+
+        print(file_id)
+
+        # Salva il file nella directory temporanea e poi cancellalo dopo 5 minuti
+        temp_filepath = os.path.join(app.config["TEMP_FOLDER"], filename)
+        file.save(temp_filepath)
+        del_thread = delete_temp_file(temp_filepath, 300) # 300 secondi (5 min)
+        del_thread.start()
+        print(f"Netturbino started for {filename}")
+
+        session["file_id"] = file_id
+        session["filename"] = filename
+        #session["file_data"] = file.read()
+
+        return jsonify({"status": "success"})
+
     return render_template("index.html")
-
-@app.route('/api/upload_file', methods=["POST"])
-def handle_file():
-    file = request.files["file"]
-
-    if file.filename == "":
-        return jsonify({"status": "error", "error_text": "No files selected"})
-
-    filename = secure_filename(file.filename)
-    file_id = generate_file_id()
-
-    print(file_id)
-
-    file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-
-    return jsonify({"status": "success", "file_id": file_id, "filename": filename})
 
 @app.route('/new-share-link', methods=["GET", "POST"])
 def new_share_link():
+    file_id = session.get("file_id")
+    filename = session.get("filename")
+    #file_data = session.get("file_data")
+    temp_filepath = TEMP_FOLDER + "/" + filename
+    print(temp_filepath)
+
+    if not file_id or not filename:
+        return redirect(url_for("index"))
+
     if request.method == "POST":
         try:
-            file_id = request.form.get("file_id")
-            filename = request.form.get("filename")
+            #file_id = request.form.get("file_id")
+            #filename = request.form.get("filename")
             sharer = request.form.get("sharer")
             expires_in = request.form.get("expires_in")
             max_downloads = request.form.get("download_times")
@@ -88,12 +130,23 @@ def new_share_link():
                 "raw": can_raw
             }
 
-            json_filename = os.path.join(UPLOAD_FOLDER, f"{file_id}.json")
+            try:
+                json_filename = os.path.join(UPLOAD_FOLDER, f"{file_id}.json")
 
-            with open(json_filename, "w") as json_file:
-                json.dump(file_info, json_file, indent=4)        
+                # Salva il file nella cartella definitiva solo se il file non è scaduto
+                final_filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                os.rename(temp_filepath, final_filepath)
 
-            return jsonify({"status": "success", "share_link": share_link})
+                with open(json_filename, "w") as json_file:
+                    json.dump(file_info, json_file, indent=4)        
+
+                # Togli i dati del file dalla sessione
+                session.pop("file_id", None)
+                session.pop("filename", None)
+
+                return jsonify({"status": "success", "share_link": share_link})
+            except FileNotFoundError:
+                return jsonify({"status": "error", "error_text": "File not found. It's probably expired..."})
         
         except Exception as e:
             return jsonify({"status": "error", "error_text": e})
