@@ -46,6 +46,41 @@ class delete_temp_file(threading.Thread):
             os.remove(self.filepath)
             print(f"[NETTURBINO] File {self.filepath} deleted.")
 
+class DailyFileCleanup(threading.Thread):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        while True:
+            self.cleanup_expired_files()
+            time.sleep(86400) # Check ogni giorno
+    
+    def cleanup_expired_files(self):
+        print("[NETTURBINO] Checking for expired files...")
+        today_str = datetime.now().strftime("%d-%m-%Y")
+
+        for filename in os.listdir(app.config["UPLOAD_FOLDER"]):
+            if filename.endswith(".json"):
+                filecode = filename[:-5] # Recupera il codice del file dal .json per leggere la data (lo so è un passaggio in più inutile...)
+
+                try:
+                    expire_date = ReadJSON(filecode, "expire_date")
+
+                    if expire_date == today_str:
+                        file_path = os.path.join(app.config["UPLOAD_FOLDER"], ReadJSON(filecode, "filename"))
+                        json_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                            print(f"[NETTURBINO] FIle deleted: {file_path}.")
+                        
+                        if os.path.exists(json_path):
+                            os.remove(json_path)
+                            print(f"[NETTURBINO] JSON deleted: {json_path}.")
+                
+                except Exception as e:
+                    print(f"[NETTURBINO] Oh oh... error during cleanup! {e}")
+
 def ReadJSON(file_code, line):
     json_filename = f"{UPLOAD_FOLDER}/{file_code}.json"
 
@@ -66,6 +101,30 @@ def ReadJSON(file_code, line):
     except json.JSONDecodeError:
         print(f"Error during decode of {json_filename}")
         return None
+
+def WriteJSON(file_code, new_data):
+    json_filename = f"{UPLOAD_FOLDER}/{file_code}.json"
+
+    try:
+        with open(json_filename, "r") as f:
+            data = json.load(f)
+        
+        data.update(new_data)
+
+        with open(filepath, "w") as f:
+            json.dump(data, f, indent=4)
+
+    except FileNotFoundError:
+        print(f"{json_filename} not found.")
+        return None
+    
+    except json.JSONDecodeError:
+        print(f"Error during decode of {json_filename}")
+        return None
+
+# Parte il thread DailyFileCleanup ad ogni avvio del server
+cleanup_thread = DailyFileCleanup()
+cleanup_thread.start()
 
 @app.route('/', methods=["GET", "POST"])
 def index():
@@ -179,7 +238,36 @@ def view_raw_file(file_id):
 
     if attachment == "False":
         attachment = False
+
     else:
+        print("Check refererrrererer")
+        if referer is None or not referer.startswith(request.host_url):
+            print("LEGGO IL JSON AOOO CAPISCI STO LEGGENDO QUESTO CODICEEEEE")
+            download_times = ReadJSON(file_id, "download_times")
+            max_downloads = ReadJSON(file_id, "max_downloads")
+
+            print(f"Download times: {download_times}\n Max downloads: {max_downloads}")
+        
+            if max_downloads != "infinite":
+                if download_times == max_downloads:
+                    return render_template("general_error.html", error="This file has reached the maximum number of downloads.", error_code="403")
+                
+                if download_times is not None:
+                    download_times += 1
+
+                    new_data = {
+                        "download_times": download_times
+                    }
+
+                    WriteJSON(file_id, new_data)
+
+                else:
+                    new_data = {
+                        "download_times": 1
+                    }
+
+                    WriteJSON(file_id, new_data)
+
         attachment = True
 
     fileinfo = ReadJSON(file_id, "all")
