@@ -6,5 +6,5 @@ A fake WeTransfer coded by LeoTecno
 - [X] Store informations about shares
 - [ ] Share rooms
 - [ ] Accounts (maybe)
-- [ ] Automate expires check
-- [ ] Check max downloads
+- [X] Automate expires check
+- [X] Check max downloads # Not working yet
